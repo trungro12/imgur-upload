@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Imgur Upload Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    input[type="text"] {
+      width: 300px;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .drop-zone {
+      width: 400px;
+      height: 200px;
+      border: 3px dashed #999;
+      border-radius: 10px;
+      background-color: #fff;
+      color: #666;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .drop-zone:hover {
+      background-color: #e6f7ff;
+    }
+
+    #output {
+      margin-top: 20px;
+      word-break: break-word;
+      text-align: center;
+    }
+
+    .uploading {
+      color: #ff9900;
+    }
+
+    .success {
+      color: #0077cc;
+    }
+
+    .error {
+      color: red;
+    }
+
+    .copy-button {
+      margin-left: 10px;
+      padding: 5px 10px;
+      font-size: 14px;
+      border: none;
+      background-color: #0077cc;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .copy-button:hover {
+      background-color: #005fa3;
+    }
+
+    .copied-message {
+      color: green;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Imgur Upload Tool</h1>
+  <input type="text" id="clientId" placeholder="Enter your Imgur Client ID" />
+  
+  <div class="drop-zone" id="dropZone">
+    Drop image here or click to upload
+  </div>
+  
+  <input type="file" id="fileInput" accept="image/*" style="display: none;" />
+  
+  <div id="output"></div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const output = document.getElementById('output');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#e6f7ff';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.background = '#fff';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#fff';
+      const file = e.dataTransfer.files[0];
+      if (file) uploadToImgur(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) uploadToImgur(file);
+    });
+
+    function uploadToImgur(file) {
+      const clientId = document.getElementById('clientId').value.trim();
+      if (!clientId) {
+        alert('Please enter your Imgur Client ID.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      output.innerHTML = '<span class="uploading">⏳ Uploading...</span>';
+
+      fetch('https://api.imgur.com/3/image', {
+        method: 'POST',
+        headers: {
+          Authorization: `Client-ID ${clientId}`
+        },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const link = data.data.link;
+          output.innerHTML = `
+            ✅ Uploaded: 
+            <a class="success" id="uploadedLink" href="${link}" target="_blank">${link}</a>
+            <button class="copy-button" onclick="copyToClipboard('${link}')">Copy Link</button>
+            <div id="copiedMsg"></div>
+          `;
+        } else {
+          output.innerHTML = `<span class="error">❌ Upload failed: ${JSON.stringify(data)}</span>`;
+        }
+      })
+      .catch(err => {
+        output.innerHTML = `<span class="error">❌ Error: ${err}</span>`;
+      });
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const copiedMsg = document.getElementById('copiedMsg');
+        copiedMsg.innerHTML = `<div class="copied-message">✅ Copied!</div>`;
+        setTimeout(() => {
+          copiedMsg.innerHTML = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
